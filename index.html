@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Twenty One Game</title>
+        <style>
+            body {
+    font-family: Arial, sans-serif;
+    background-image: url('https://www.cryptodefinance.com/wp-content/uploads/2021/09/How-blockchain-games-work_1200x640.jpg'); /* Replace 'background.jpg' with the actual path to your background image */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+    
+    
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+                text-align: center;
+                padding: 20px;
+            }
+    
+            h1 {
+                color: #333;
+            }
+
+
+
+    
+      
+ 
+    
+            #error-message {
+                color: red;
+            }
+
+            /* Style for text */
+.text {
+    font-size: 16px;
+    color: #333;
+    /* Add any other styles you prefer */
+}
+
+/* Style for input */
+.input {
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    /* Add any other styles you prefer */
+}
+
+/* Style for buttons (in case you have buttons) */
+.button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    margin: 5px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+        </style>
+    </head>
+    
+    <body>
+        <div class="container">
+            <h1>Twenty One Game</h1>
+            <button class="button" onclick="joinGame()">Join Game</button>
+            <button class="button" onclick="makeMove()">Make Move</button>
+            <button class="button" onclick="startTimeout()">Start Timeout</button>
+            <button class="button" onclick="claimTimeout()">Claim Timeout</button>
+            <div>
+                <label for="seq">Sequence:</label>
+                <input type="number" id="seq" min="1" max="3">
+                <label for="value">Value:</label>
+                <input type="number" id="value" min="1" max="3">
+            </div>
+            <div id="error-message"></div>
+            <hr>
+            <div>
+                <p>Player 1: <span id="player1"></span></p>
+                <p>Player 2: <span id="player2"></span></p>
+                <p>Bet Amount (ETH): <span id="betAmount"></span></p>
+                <p>Game Over: <span id="gameOver"></span></p>
+                <p>Current Player: <span id="currentPlayer"></span></p>
+                <p>Sequence: <span id="sequence"></span></p>
+                <p>Number: <span id="number"></span></p>
+            </div>
+        </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.0/web3.min.js"></script>
+    <script>
+        // Connect to the Ethereum network
+        const web3 = new Web3(window.ethereum);
+
+        // Set the contract address and ABI
+        const contractAddress = '0x56Cd2dd43d3df4a8FA5D03C11B0544b775f80D91'; // Replace with your deployed contract address
+        const contractABI = [{"inputs":[{"internalType":"uint256","name":"_timeoutInterval","type":"uint256"}],"stateMutability":"payable","type":"constructor"},{"anonymous":false,"inputs":[],"name":"GameStarted","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint8","name":"seq","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"value","type":"uint8"}],"name":"MoveMade","type":"event"},{"anonymous":false,"inputs":[],"name":"TimeoutStarted","type":"event"},{"inputs":[],"name":"betAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"cancel","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimTimeout","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"gameOver","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"join","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"seq","type":"uint8"},{"internalType":"uint8","name":"value","type":"uint8"}],"name":"move","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"seq","type":"uint8"},{"internalType":"uint8","name":"num","type":"uint8"},{"internalType":"bytes","name":"sig","type":"bytes"},{"internalType":"uint8","name":"value","type":"uint8"}],"name":"moveFromState","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"player1","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"player2","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"startTimeout","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"state","outputs":[{"internalType":"uint8","name":"seq","type":"uint8"},{"internalType":"uint8","name":"num","type":"uint8"},{"internalType":"address","name":"whoseTurn","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"timeout","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"timeoutInterval","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]; // Replace with your contract's ABI
+
+        // Create a contract instance
+        const twentyOneGameContract = new web3.eth.Contract(contractABI, contractAddress);
+
+        // Set the default account
+        web3.eth.requestAccounts()
+            .then(accounts => {
+                web3.eth.defaultAccount = accounts[0];
+            });
+
+        // Functions to interact with the contract
+        function joinGame() {
+    web3.eth.requestAccounts()
+        .then(accounts => {
+            const fromAddress = accounts[0];
+            twentyOneGameContract.methods.join().send({ 
+                value: web3.utils.toWei('0', 'ether'), 
+                from: fromAddress, 
+                gas: 3000000  // Set the gas limit here (you can adjust this value)
+            })
+                .then(receipt => {
+                    console.log('Joined game:', receipt);
+                })
+                .catch(error => {
+                    console.error('Error joining game:', error);
+                });
+        })
+        .catch(error => {
+            console.error('Error getting accounts:', error);
+        });
+}
+
+function makeMove() {
+    web3.eth.requestAccounts()
+        .then(accounts => {
+            const fromAddress = accounts[0];
+            const seq = document.getElementById('seq').value;
+            const value = document.getElementById('value').value;
+
+            // Check if it's the correct player's turn
+            twentyOneGameContract.methods.state().call()
+                .then(state => {
+                    if (fromAddress === state.whoseTurn.toLowerCase()) {
+                        twentyOneGameContract.methods.move(seq, value).send({ 
+                            from: fromAddress,
+                            gas: 2000000  // You can set an appropriate gas limit here
+                        })
+                        .then(receipt => {
+                            console.log('Move made:', receipt);
+                        })
+                        .catch(error => {
+                            const errorMessage = error.message || error;
+                            document.getElementById('error-message').textContent = 'Error making move: ' + errorMessage;
+                        });
+                    } else {
+                        document.getElementById('error-message').textContent = 'It\'s not your turn to make a move.';
+                    }
+                });
+        })
+        .catch(error => {
+            const errorMessage = error.message || error;
+            document.getElementById('error-message').textContent = 'Error getting accounts: ' + errorMessage;
+        });
+}
+
+
+function startTimeout() {
+    web3.eth.requestAccounts()
+        .then(accounts => {
+            const fromAddress = accounts[0];
+            twentyOneGameContract.methods.startTimeout().send({
+                from: fromAddress,
+                gas: 3000000 // You can set an appropriate gas limit here
+            })
+                .then(receipt => {
+                    console.log('Timeout started:', receipt);
+                })
+                .catch(error => {
+                    const errorMessage = error.message || error;
+                    document.getElementById('error-message').textContent = 'Error starting timeout: ' + errorMessage;
+                });
+        })
+        .catch(error => {
+            const errorMessage = error.message || error;
+            document.getElementById('error-message').textContent = 'Error getting accounts: ' + errorMessage;
+        });
+}
+
+        function claimTimeout() {
+    web3.eth.requestAccounts()
+        .then(accounts => {
+            const fromAddress = accounts[0];
+            twentyOneGameContract.methods.claimTimeout().send({
+                from: fromAddress,
+                gas: 3000000 // You can set an appropriate gas limit here
+            })
+                .then(receipt => {
+                    console.log('Timeout claimed:', receipt);
+                })
+                .catch(error => {
+                    const errorMessage = error.message || error;
+                    document.getElementById('error-message').textContent = 'Error claiming timeout: ' + errorMessage;
+                });
+        })
+        .catch(error => {
+            const errorMessage = error.message || error;
+            document.getElementById('error-message').textContent = 'Error getting accounts: ' + errorMessage;
+        });
+}
+
+        // Update UI with contract state
+        function updateUI() {
+            twentyOneGameContract.methods.player1().call()
+                .then(player1 => {
+                    document.getElementById('player1').textContent = player1;
+                });
+
+            twentyOneGameContract.methods.player2().call()
+                .then(player2 => {
+                    document.getElementById('player2').textContent = player2;
+                });
+
+            twentyOneGameContract.methods.betAmount().call()
+                .then(betAmount => {
+                    document.getElementById('betAmount').textContent = web3.utils.fromWei(betAmount, 'ether');
+                });
+
+            twentyOneGameContract.methods.gameOver().call()
+                .then(gameOver => {
+                    document.getElementById('gameOver').textContent = gameOver;
+                });
+
+            twentyOneGameContract.methods.state().call()
+                .then(state => {
+                    document.getElementById('currentPlayer').textContent = state.whoseTurn;
+                    document.getElementById('sequence').textContent = state.seq;
+                    document.getElementById('number').textContent = state.num;
+                });
+        }
+
+        setInterval(updateUI, 1000); // Update UI every second
+    </script>
+</body>
+</html>
